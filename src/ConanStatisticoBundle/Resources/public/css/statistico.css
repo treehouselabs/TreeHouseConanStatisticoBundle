@@ -1,0 +1,26 @@
+
+.statistico .search {
+  color: #ddd;
+  font-size: 30px;
+  margin-bottom: 40px;
+}
+
+.statistico .search input {
+  border: 0;
+  outline: none;
+  width: 90%;
+}
+
+.statistico .search i {
+  margin-right: 10px;
+}
+
+.statistico .search label {
+  padding-bottom: 3px;
+  display: block;
+  border-bottom: solid 2px #ddd;
+}
+
+.statistico .mg-chart-title {
+  margin-bottom: -30px;
+}

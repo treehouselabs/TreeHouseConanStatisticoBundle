@@ -1,0 +1,41 @@
+{% extends "FMConanBundle::base.html.twig" %}
+
+{% set body_class = body_class|default('') ~ ' statistico' %}
+
+{% block tabs '' %}
+{% block tabs_extra '' %}
+
+{% block title %}
+  <div class="row">
+    <div class="col-lg-12">
+      <form class="search">
+        <label>
+          <i class="icon-search"></i>
+          <span class="input-border">
+            <input type="text" name="q" id="search-input" autocomplete="off" value="{{ app.request.get('q') }}">
+            <span class="loader"></span>
+          </span>
+        </label>
+      </form>
+    </div>
+  </div>
+{% endblock %}
+
+{% block content %}
+  <div class="row">
+    <div class="col-lg-12">
+      <div id="buckets-container"></div>
+    </div>
+  </div>
+{% endblock %}
+
+{% block script %}
+  {{ parent() }}
+
+  var statistico = new Statistico(
+    $('#search-input'),
+    $('#buckets-container'),
+    $('.loader'),
+    '{{ cms_action_route(cms_action('statistico')) }}'
+  );
+{% endblock %}

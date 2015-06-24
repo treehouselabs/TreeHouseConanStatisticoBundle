@@ -1,0 +1,17 @@
+{
+    "name": "treehouselabs/conan-statistico-bundle",
+    "require": {
+        "fieg/statistico": "*"
+    },
+    "authors": [
+        {
+            "name": "Jeroen Fiege",
+            "email": "jeroen@treehouse.nl"
+        }
+    ],
+    "autoload": {
+        "psr-4": {
+            "TreeHouse\\ConanStatisticoBundle\\": "src/ConanStatisticoBundle/"
+        }
+    }
+}
