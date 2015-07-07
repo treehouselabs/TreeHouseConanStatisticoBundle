@@ -68,11 +68,32 @@ class Statistico extends CustomAction
         /** @var Reader $reader */
         $reader = $this->getConfig()->get('statistico.reader');
 
-        $counts = $reader->queryCounts($request->get('bucket'), 'minutes', new \DateTime('-24 hours'));
+        $from = new \DateTime($request->get('from', '-30 minutes'));
+        $to = new \DateTime();
+        $diff = $to->getTimestamp() - $from->getTimestamp();
 
-        $retval = [];
+        if ($diff <= 3600) {
+            $granularity = 'seconds';
+            $factor = 1;
+        } elseif ($diff <= 86400) {
+            $granularity = 'minutes';
+            $factor = 60;
+        } else {
+            $granularity = 'hours';
+            $factor = 3600;
+        }
+
+        $counts = $reader->queryCounts($request->get('bucket'), $granularity, $from, $to);
+        $counts = $this->completeCountsData($counts, $factor, $from, $to);
+
+        $retval = [
+            'series' => [],
+            'from' => $from->getTimestamp(),
+            'to' => (new \DateTime())->getTimestamp(),
+        ];
+
         foreach ($counts as $timestamp => $count) {
-            $retval[] = ['date' => $timestamp, 'count' => $count];
+            $retval['series'][] = ['date' => (string) $timestamp, 'count' => $count];
         }
 
         throw new DirectResponseException(new JsonResponse($retval));
@@ -99,6 +120,39 @@ class Statistico extends CustomAction
             if (false !== stripos($bucket, $query)) {
                 $retval[] = $bucket;
             }
+        }
+
+        return $retval;
+    }
+
+    /**
+     * @param array $data
+     * @param int $factor
+     * @param \DateTime $from
+     * @param \DateTime $to
+     *
+     * @return array
+     */
+    protected function completeCountsData(
+        array $data,
+        $factor,
+        \DateTime $from,
+        \DateTime $to = null
+    ) {
+        reset($data);
+
+        $to = $to ?: new \DateTime();
+
+        // factor diff
+        $mod = ($from->getTimestamp() % $factor);
+
+        $min = min($from->getTimestamp() - $mod, key($data)); // first key
+        $max = $to->getTimestamp();
+
+        $retval = [];
+
+        for ($t = $min; $t <= $max; $t += $factor) {
+            $retval[$t] = isset($data[$t]) ? $data[$t] : 0;
         }
 
         return $retval;

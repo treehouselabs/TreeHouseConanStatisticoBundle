@@ -5,6 +5,36 @@
 {% block tabs '' %}
 {% block tabs_extra '' %}
 
+{% block context_menu %}
+    <div class="panel panel-warning">
+      <div class="panel-heading">Filters</div>
+      <div class="panel-body">
+
+        <div class="form-group">
+          <label class="control-label" for="timepicker">
+            Time picker
+          </label>
+          <select name="timepicker" id="timepicker" class="form-control">
+            {% set windows = {
+                '-30 minutes': '30 min',
+                '-60 minutes': '60 min',
+                '-3 hours': '3 hours',
+                '-6 hours': '6 hours',
+                '-12 hours': '12 hours',
+                '-1 day': '24 hours',
+                '-3 day': '3 days',
+                '-7 day': '7 days',
+              }
+            %}
+            {% for v,t in windows %}
+            <option value="{{ v }}" {% if app.request.get('from') == v %}selected="selected"{% endif %}>{{ t }}</option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+    </div>
+{% endblock %}
+
 {% block title %}
   <div class="row">
     <div class="col-lg-12">
@@ -32,10 +62,11 @@
 {% block script %}
   {{ parent() }}
 
-  var statistico = new Statistico(
+  var statistico = new StatisticoUI(
     $('#search-input'),
     $('#buckets-container'),
     $('.loader'),
+    $('#timepicker'),
     '{{ cms_action_route(cms_action('statistico')) }}'
   );
 {% endblock %}
