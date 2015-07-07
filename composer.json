@@ -1,7 +1,7 @@
 {
     "name": "treehouselabs/conan-statistico-bundle",
     "require": {
-        "fieg/statistico": "*"
+        "fieg/statistico": "~2.0"
     },
     "authors": [
         {
