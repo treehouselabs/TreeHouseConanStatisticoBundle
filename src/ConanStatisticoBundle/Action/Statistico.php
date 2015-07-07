@@ -146,7 +146,12 @@ class Statistico extends CustomAction
         // factor diff
         $mod = ($from->getTimestamp() % $factor);
 
-        $min = min($from->getTimestamp() - $mod, key($data)); // first key
+        if ($data) {
+            $min = min($from->getTimestamp() - $mod, key($data)); // first key
+        } else {
+            $min = $from->getTimestamp();
+        }
+
         $max = $to->getTimestamp();
 
         $retval = [];

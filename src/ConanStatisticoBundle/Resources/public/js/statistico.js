@@ -233,17 +233,23 @@ var StatisticoUI = function($searchInput, $bucketsContainer, $loader, $timePicke
           hideLoader();
           updateUrl();
         } else {
-          var progress = 0;
-          $.each(data.buckets, function (i, bucket) {
-            renderBucket(bucket, function() {
-              progress++;
+          // use a call stack to prevent overloading the backend.
+          var callbackStack = [function() {
+            hideLoader();
+            updateUrl();
+          }];
 
-              if (progress === data.buckets.length) {
-                hideLoader();
-                updateUrl();
-              }
-            });
+          $.each(data.buckets, function (i, bucket) {
+            callbackStack[callbackStack.length] = function() {
+              renderBucket(bucket, function() {
+                if (callbackStack.length > 0) {
+                  callbackStack.pop()();
+                }
+              });
+            };
           });
+
+          callbackStack[callbackStack.length - 1]();
         }
       },
       error: function() {
