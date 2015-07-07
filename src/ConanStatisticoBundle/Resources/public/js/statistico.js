@@ -195,7 +195,17 @@ var StatisticoUI = function($searchInput, $bucketsContainer, $loader, $timePicke
   var updateUrl = function() {
     if (window.history && window.history.replaceState) {
       var state = history.state;
-      history.replaceState(state, document.title, baseUrl + (currentQuery ? '?q=' + encodeURI(currentQuery) : '') + '&from=' + timePicker.getValue());
+      var url = baseUrl;
+      var nextSeparator = '?';
+
+      if (currentQuery) {
+        url = url + nextSeparator + 'q=' + encodeURI(currentQuery);
+        nextSeparator = '&';
+      }
+
+      url = url + nextSeparator + 'from=' + encodeURI(timePicker.getValue());
+
+      history.replaceState(state, document.title, url);
     }
   };
 
@@ -214,10 +224,14 @@ var StatisticoUI = function($searchInput, $bucketsContainer, $loader, $timePicke
         q: query
       },
       success: function(data) {
+        currentQuery = query;
         $bucketsContainer.html('');
 
         if (0 == data.buckets.length) {
           renderNotFound(query);
+
+          hideLoader();
+          updateUrl();
         } else {
           var progress = 0;
           $.each(data.buckets, function (i, bucket) {
@@ -231,8 +245,6 @@ var StatisticoUI = function($searchInput, $bucketsContainer, $loader, $timePicke
             });
           });
         }
-
-        currentQuery = query;
       },
       error: function() {
         hideLoader();
