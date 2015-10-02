@@ -9,7 +9,7 @@ Example cms.xml:
 <item action="statistico"/>
 
 <!-- Statistico -->
-<action type="custom" class="FM\CmsBundle\Action\Statistico" title="statistico" slug="statistico"/>
+<action type="custom" class="TreeHouse\ConanStatisticoBundle\Action\Statistico" title="statistico" slug="statistico"/>
 ```
 
 Config:
