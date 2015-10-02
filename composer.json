@@ -1,6 +1,13 @@
 {
     "name": "treehouselabs/conan-statistico-bundle",
+    "repositories": [
+        {
+            "type": "git",
+            "url": "git@github.com:treehouselabs/FMConanBundle.git"
+        }
+    ],
     "require": {
+        "fm/conan-bundle": "dev-master",
         "fieg/statistico": "~2.0"
     },
     "authors": [

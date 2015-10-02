@@ -161,27 +161,13 @@ var StatisticoUI = function($searchInput, $bucketsContainer, $loader, $timePicke
 
     $bucketsContainer.append('<div id="' + elementId + '" class="bucket"></div>');
 
-    d3.json(baseUrl + '?action=data&bucket=' + bucket + '&from=' + timePicker.getValue(), function (data) {
-      data.series = data.series.map(function (d) {
-        d.date = new Date(d.date * 1000);
-        return d;
-      });
-
-      MG.data_graphic({
-        title: bucket,
-        data: data.series,
-        width: $bucketsContainer.width(),
-        height: 150,
-        target: '#' + elementId,
-        x_accessor: 'date',
-        y_accessor: 'count',
-        interpolate: 'basic'
-      });
-
-      if (onComplete) {
-        onComplete();
-      }
-    });
+    graph = new StatisticoGraph(
+        $('#' + elementId),
+        bucket,
+        baseUrl + '?action=data&bucket=' + bucket + '&from=' + timePicker.getValue()
+    );
+    graph.onComplete = onComplete;
+    graph.render();
   };
 
   var showLoader = function() {
@@ -234,22 +220,24 @@ var StatisticoUI = function($searchInput, $bucketsContainer, $loader, $timePicke
           updateUrl();
         } else {
           // use a call stack to prevent overloading the backend.
-          var callbackStack = [function() {
-            hideLoader();
-            updateUrl();
-          }];
+          var callbackStack = [];
 
           $.each(data.buckets, function (i, bucket) {
             callbackStack[callbackStack.length] = function() {
               renderBucket(bucket, function() {
                 if (callbackStack.length > 0) {
-                  callbackStack.pop()();
+                  callbackStack.shift()();
                 }
               });
             };
           });
 
-          callbackStack[callbackStack.length - 1]();
+          callbackStack[callbackStack.length] = function() {
+            hideLoader();
+            updateUrl();
+          };
+
+          callbackStack.shift()();
         }
       },
       error: function() {
@@ -288,4 +276,35 @@ var StatisticoUI = function($searchInput, $bucketsContainer, $loader, $timePicke
       self.search(searchInput.getValue());
     }
   })();
+};
+
+var StatisticoGraph = function($container, title, dataUrl) {
+  var self = this;
+
+  this.onComplete = null;
+
+  this.render = function() {
+    d3.json(dataUrl, function (data) {
+      data.series = data.series.map(function (d) {
+        d.date = new Date(d.date * 1000);
+        return d;
+      });
+
+      MG.data_graphic({
+        title: title,
+        data: data.series,
+        width: $container.width(),
+        height: 150,
+        target: '#' + $container.attr('id'),
+        x_accessor: 'date',
+        y_accessor: 'count',
+        interpolate: 'basic',
+        transition_on_update: false
+      });
+
+      if (self.onComplete) {
+        self.onComplete();
+      }
+    });
+  }
 };

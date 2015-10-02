@@ -24,3 +24,7 @@
 .statistico .mg-chart-title {
   margin-bottom: -30px;
 }
+
+.statistico .buckets-container .bucket {
+  min-height: 152px;
+}
