@@ -29,8 +29,12 @@ class Statistico extends CustomAction
                     $this->searchAction($request);
                     break;
 
-                case 'data':
-                    $this->dataAction($request);
+                case 'graph':
+                    $this->graphAction(
+                        $request->get('bucket'),
+                        $request->get('type'),
+                        $request->get('from', '-30 minutes')
+                    );
                     break;
             }
         }
@@ -53,22 +57,34 @@ class Statistico extends CustomAction
      */
     private function searchAction(Request $request)
     {
+        /** @var Reader $reader */
+        $reader = $this->getConfig()->get('statistico.reader');
+
         $buckets = $this->findBuckets($request->get('q'));
 
-        throw new DirectResponseException(new JsonResponse(['buckets' => $buckets]));
+        $types = [];
+        foreach ($buckets as $bucket) {
+            $types[$bucket] = $reader->getAvailableTypes($bucket);
+        }
+
+        throw new DirectResponseException(new JsonResponse(['buckets' => $buckets, 'types' => $types]));
     }
 
     /**
      * @param Request $request
+     * @param $bucket
+     *
+     * @return array
      *
      * @throws DirectResponseException
      */
-    private function dataAction(Request $request)
+    public function graphAction($bucket, $type, $from)
     {
         /** @var Reader $reader */
         $reader = $this->getConfig()->get('statistico.reader');
 
-        $from = new \DateTime($request->get('from', '-30 minutes'));
+        $types = $type ? [$type] : $reader->getAvailableTypes($bucket);
+        $from = new \DateTime($from);
         $to = new \DateTime();
         $diff = $to->getTimestamp() - $from->getTimestamp();
 
@@ -83,8 +99,13 @@ class Statistico extends CustomAction
             $factor = 3600;
         }
 
-        $counts = $reader->queryCounts($request->get('bucket'), $granularity, $from, $to);
-        $counts = $this->completeCountsData($counts, $factor, $from, $to);
+        if (in_array('gauges', $types)) {
+            $counts = $reader->queryGauges($bucket, $granularity, $from, $to);
+            $counts = $this->completeGaugesData($counts, $factor, $from, $to);
+        } elseif (in_array('counts', $types)) {
+            $counts = $reader->queryCounts($bucket, $granularity, $from, $to);
+            $counts = $this->completeCountsData($counts, $factor, $from, $to);
+        }
 
         $retval = [
             'series' => [],
@@ -139,6 +160,60 @@ class Statistico extends CustomAction
         \DateTime $from,
         \DateTime $to = null
     ) {
+        list ($min, $max) = $this->getMinMax($data, $factor, $from, $to);
+
+        $retval = [];
+
+        for ($t = $min; $t <= $max; $t += $factor) {
+            $retval[$t] = isset($data[$t]) ? $data[$t] : 0;
+        }
+
+        return $retval;
+    }
+
+    /**
+     * @param array $data
+     * @param int $factor
+     * @param \DateTime $from
+     * @param \DateTime $to
+     *
+     * @return array
+     */
+    protected function completeGaugesData(
+        array $data,
+        $factor,
+        \DateTime $from,
+        \DateTime $to = null
+    ) {
+        list ($min, $max) = $this->getMinMax($data, $factor, $from, $to);
+
+        $retval = [];
+
+        $previous = 0;
+
+        for ($t = $min; $t <= $max; $t += $factor) {
+            $retval[$t] = isset($data[$t]) ? $data[$t] : $previous;
+
+            $previous = $retval[$t];
+        }
+
+        return $retval;
+    }
+
+    /**
+     * @param array $data
+     * @param $factor
+     * @param \DateTime $from
+     * @param \DateTime|null $to
+     *
+     * @return array
+     */
+    protected function getMinMax(
+        array $data,
+        $factor,
+        \DateTime $from,
+        \DateTime $to = null
+    ) {
         reset($data);
 
         $to = $to ?: new \DateTime();
@@ -154,12 +229,6 @@ class Statistico extends CustomAction
 
         $max = $to->getTimestamp();
 
-        $retval = [];
-
-        for ($t = $min; $t <= $max; $t += $factor) {
-            $retval[$t] = isset($data[$t]) ? $data[$t] : 0;
-        }
-
-        return $retval;
+        return [$min, $max];
     }
 }

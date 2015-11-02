@@ -164,7 +164,7 @@ var StatisticoUI = function($searchInput, $bucketsContainer, $loader, $timePicke
     graph = new StatisticoGraph(
         $('#' + elementId),
         bucket,
-        baseUrl + '?action=data&bucket=' + bucket + '&from=' + timePicker.getValue()
+        baseUrl + '?action=graph&bucket=' + bucket + '&from=' + timePicker.getValue()
     );
     graph.onComplete = onComplete;
     graph.render();
