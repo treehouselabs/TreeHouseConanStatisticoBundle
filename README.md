@@ -1,3 +1,5 @@
+> This package is DEPRECATED 
+
 TreeHouseConanStatisticoBundle
 ==============================
 
