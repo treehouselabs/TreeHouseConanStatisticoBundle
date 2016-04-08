@@ -33,7 +33,9 @@ class Statistico extends CustomAction
                     $this->graphAction(
                         $request->get('bucket'),
                         $request->get('type'),
-                        $request->get('from', '-30 minutes')
+                        $request->get('from', '-30 minutes'),
+                        $request->get('granularity', 'auto'),
+                        ('true' === $request->get('null-as-zero', 'true'))
                     );
                     break;
             }
@@ -71,40 +73,72 @@ class Statistico extends CustomAction
     }
 
     /**
-     * @param Request $request
      * @param $bucket
      *
-     * @return array
+     * @param $type
+     * @param $from
+     * @param string $granularity
+     * @param bool $nullAsZero
      *
+     * @return array
      * @throws DirectResponseException
      */
-    public function graphAction($bucket, $type, $from)
+    public function graphAction($bucket, $type, $from, $granularity = 'auto', $nullAsZero = true)
     {
         /** @var Reader $reader */
         $reader = $this->getConfig()->get('statistico.reader');
 
-        $types = $type ? [$type] : $reader->getAvailableTypes($bucket);
+        if (is_array($bucket)) {
+            $buckets = $bucket;
+        } else {
+            $buckets = [$bucket];
+        }
+
+        $types = $type ? [$type] : $reader->getAvailableTypes($buckets[0]);
+
         $from = new \DateTime($from);
         $to = new \DateTime();
         $diff = $to->getTimestamp() - $from->getTimestamp();
 
-        if ($diff <= 3600) {
-            $granularity = 'seconds';
-            $factor = 1;
-        } elseif ($diff <= 86400) {
-            $granularity = 'minutes';
-            $factor = 60;
-        } else {
-            $granularity = 'hours';
-            $factor = 3600;
+        if ('auto' === $granularity) {
+            if ($diff <= 3600) {
+                $granularity = 'seconds';
+            } elseif ($diff <= 86400) {
+                $granularity = 'minutes';
+            } else {
+                $granularity = 'hours';
+            }
         }
 
-        if (in_array('gauges', $types)) {
-            $counts = $reader->queryGauges($bucket, $granularity, $from, $to);
-            $counts = $this->completeGaugesData($counts, $factor, $from, $to);
-        } elseif (in_array('counts', $types)) {
-            $counts = $reader->queryCounts($bucket, $granularity, $from, $to);
-            $counts = $this->completeCountsData($counts, $factor, $from, $to);
+        switch ($granularity) {
+            case 'seconds':
+                $factor = 1;
+                break;
+            case 'minutes':
+                $factor = 60;
+                break;
+            case 'hours':
+                $factor = 3600;
+                break;
+            case 'days':
+                $factor = 86400;
+                break;
+        }
+
+        $counts = [];
+        
+        foreach ($buckets as $bucket) {
+            if (in_array('gauges', $types)) {
+                $counts[$bucket] = $reader->queryGauges($bucket, $granularity, $from, $to);
+                if ($nullAsZero) {
+                    $counts[$bucket] = $this->completeGaugesData($counts[$bucket], $factor, $from, $to);
+                }
+            } elseif (in_array('counts', $types)) {
+                $counts[$bucket] = $reader->queryCounts($bucket, $granularity, $from, $to);
+                if ($nullAsZero) {
+                    $counts[$bucket] = $this->completeCountsData($counts[$bucket], $factor, $from, $to);
+                }
+            }
         }
 
         $retval = [
@@ -113,8 +147,13 @@ class Statistico extends CustomAction
             'to' => (new \DateTime())->getTimestamp(),
         ];
 
-        foreach ($counts as $timestamp => $count) {
-            $retval['series'][] = ['date' => (string) $timestamp, 'count' => $count];
+        foreach ($counts as $bucket => $countData) {
+            $serie = [];
+            foreach ($countData as $timestamp => $count) {
+                $serie[] = ['date' => (string) $timestamp, 'count' => $count];
+            }
+
+            $retval['series'][] = $serie;
         }
 
         throw new DirectResponseException(new JsonResponse($retval));

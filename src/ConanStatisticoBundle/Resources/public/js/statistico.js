@@ -278,19 +278,21 @@ var StatisticoUI = function($searchInput, $bucketsContainer, $loader, $timePicke
   })();
 };
 
-var StatisticoGraph = function($container, title, dataUrl) {
+var StatisticoGraph = function($container, title, dataUrl, mgOptions) {
   var self = this;
 
   this.onComplete = null;
 
   this.render = function() {
     d3.json(dataUrl, function (data) {
-      data.series = data.series.map(function (d) {
-        d.date = new Date(d.date * 1000);
-        return d;
-      });
+      for (var i = 0; i < data.series.length; i++) {
+        data.series[i] = data.series[i].map(function (d) {
+          d.date = new Date(d.date * 1000);
+          return d;
+        });
+      }
 
-      MG.data_graphic({
+      MG.data_graphic($.extend({}, {
         title: title,
         data: data.series,
         width: $container.width(),
@@ -298,9 +300,10 @@ var StatisticoGraph = function($container, title, dataUrl) {
         target: '#' + $container.attr('id'),
         x_accessor: 'date',
         y_accessor: 'count',
+        european_clock: true,
         interpolate: 'basic',
         transition_on_update: false
-      });
+      }, mgOptions));
 
       if (self.onComplete) {
         self.onComplete();
