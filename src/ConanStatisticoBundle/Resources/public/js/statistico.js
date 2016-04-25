@@ -285,12 +285,9 @@ var StatisticoGraph = function($container, title, dataUrl, mgOptions) {
 
   this.render = function() {
     d3.json(dataUrl, function (data) {
-      for (var i = 0; i < data.series.length; i++) {
-        data.series[i] = data.series[i].map(function (d) {
-          d.date = new Date(d.date * 1000);
-          return d;
-        });
-      }
+      data.series.forEach(function (val) {
+        val.date = new Date(val.date * 1000);
+      });
 
       MG.data_graphic($.extend({}, {
         title: title,
