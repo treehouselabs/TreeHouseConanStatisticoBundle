@@ -286,10 +286,16 @@ var StatisticoGraph = function($container, title, dataUrl, mgOptions) {
   this.render = function() {
     d3.json(dataUrl, function (data) {
       for (var i = 0; i < data.series.length; i++) {
-        data.series[i] = data.series[i].map(function (d) {
-          d.date = new Date(d.date * 1000);
-          return d;
-        });
+        if (data.series[i].date) {
+          // old format contains always one series
+          data.series[i].date = new Date(data.series[i].date * 1000);
+        } else {
+          // new format contains one or more series
+          data.series[i] = data.series[i].map(function (d) {
+            d.date = new Date(d.date * 1000);
+            return d;
+          });
+        }
       }
 
       MG.data_graphic($.extend({}, {
